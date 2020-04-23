@@ -2,13 +2,10 @@
 
 Lang: C++
 
-library: qt
+git commit style: angular
 
 works for both unix and dos
 
 executes 8-bit games
-
-
-## Games that are tested:
 
 unsigned short variable;
