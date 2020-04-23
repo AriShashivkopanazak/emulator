@@ -9,6 +9,12 @@ class proc {
         void run() {
             // place all tasks here
 
+            /**
+             * throw error if no rom is given
+             */
+            
+
+
             std::cout << "this is how it will work";
         }
 
