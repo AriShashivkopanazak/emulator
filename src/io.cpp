@@ -1,4 +1,5 @@
 #include "features/window.cpp"
+#include "features/emulation.cpp"
 
 /**
  * run io.cpp in main, acts as a taskmgr for main
@@ -9,9 +10,9 @@ class proc {
     public:
         void run(int argc, char** argv) {
             // place all tasks here
-            
             // create a window
             newWindow.createWindow(argc, argv);
+
 
         }
 
