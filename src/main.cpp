@@ -2,7 +2,7 @@
 
 /**
  * --------------------------------
- * A Cross Platform chip-8 Emulator
+ * CHIP-8 Emulator with sound
  * --------------------------------
  */
 int main(int argc, char** argv)

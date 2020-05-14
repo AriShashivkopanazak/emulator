@@ -1,4 +1,9 @@
 
+/**
+ * file : emulation.cpp
+ * 
+ * Holds all processes pertaining to the emulator
+ */
 class emulation_specs {
     //figure out what needs to be private
 public:
@@ -12,8 +17,8 @@ public:
     unsigned char V[16];
 
     // There is an Index register I and a program counter (pc) which can have a value from 0x000 to 0xFFF
-    unsigned short I;
-    unsigned short pc;
+    unsigned short index_register;
+    unsigned short program_counter;
 
     /**
      * memory map
@@ -57,16 +62,27 @@ public:
      * you can use an array to store the current state of the key.
      */
     unsigned char keypad[16];
+    
     void initialize();
 
-    void load();
+    bool load();
 
     void emulate_cycle();
 };
 
-void emulation_specs::initialize() {}
+void emulation_specs::initialize()
+{
+  // Initialize registers and memory once
+}
+ 
+void emulation_specs::emulate_cycle()
+{
+  // Fetch Opcode
+  // Decode Opcode
+  // Execute Opcode
+ 
+  // Update timers
+}
 
-void chip8::load() {}
-
-void chip8::emulate_cycle() {}
+bool emulation_specs::load() {}
 

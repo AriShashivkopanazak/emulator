@@ -1,5 +1,10 @@
 #include <GL/glut.h>
 
+/**
+ * file : window.cpp
+ * 
+ * Holds all processes pertaining to the window
+ */
 class window
 {
     public:

@@ -2,21 +2,32 @@
 #include "features/emulation.cpp"
 
 /**
- * run io.cpp in main, acts as a taskmgr for main
- * instantiate classes
+ * file : io.cpp
+ * 
+ * Manages all processes
  */
-
 class proc {
     public:
         void run(int argc, char** argv) {
             // place all tasks here
             // create a window
             newWindow.createWindow(argc, argv);
+            // initialize and load game
+
+            // emulation loop
+            while (true)
+            {
+                // emulate one cycle
+
+                // if the "draw" is set, update screen
+
+                // store key press state (press and release)
 
 
+            }
         }
 
     private:
-        // give each thing a instance here
+        // give each class a instance here
         window newWindow;
 };
