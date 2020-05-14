@@ -3,7 +3,7 @@
 /**
  * file : window.cpp
  * 
- * Holds all processes pertaining to the window
+ * renders the window
  */
 class window
 {

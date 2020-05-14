@@ -5,7 +5,7 @@
 
 # myapp: main.cpp
 clean:
-	g++ src/main.cpp src/io.cpp src/features/* -o build/emulator -lglut -lGLU -lGL
+	g++ src/main.cpp src/io.cpp src/miver/* -o build/emulator -lglut -lGLU -lGL
 
 
 # DIR_X	=	(usually ok, might try with -I/usr/X11R6/lib)

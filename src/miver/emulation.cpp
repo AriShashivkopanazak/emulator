@@ -1,4 +1,3 @@
-
 /**
  * file : emulation.cpp
  * 
@@ -63,26 +62,22 @@ public:
      */
     unsigned char keypad[16];
     
-    void initialize();
+    void initialize()
+    {
+      // Initialize registers and memory once
+    }
 
-    bool load();
+    bool load()
+    {
+      return true;
+    }
 
-    void emulate_cycle();
+    void emulate_cycle()
+    {
+      // Fetch Opcode
+      // Decode Opcode
+      // Execute Opcode
+      // Update timers
+    }
 };
-
-void emulation_specs::initialize()
-{
-  // Initialize registers and memory once
-}
- 
-void emulation_specs::emulate_cycle()
-{
-  // Fetch Opcode
-  // Decode Opcode
-  // Execute Opcode
- 
-  // Update timers
-}
-
-bool emulation_specs::load() {}
 

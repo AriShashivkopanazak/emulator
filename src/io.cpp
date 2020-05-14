@@ -1,5 +1,5 @@
-#include "features/window.cpp"
-#include "features/emulation.cpp"
+#include "miver/window.cpp"
+#include "miver/emulation.cpp"
 
 /**
  * file : io.cpp
@@ -12,13 +12,16 @@ class proc {
             // place all tasks here
             // create a window
             newWindow.createWindow(argc, argv);
+
             // initialize and load game
+            chip.initialize();
+            chip.load();
 
             // emulation loop
             while (true)
             {
                 // emulate one cycle
-
+                chip.emulate_cycle();
                 // if the "draw" is set, update screen
 
                 // store key press state (press and release)
@@ -30,4 +33,5 @@ class proc {
     private:
         // give each class a instance here
         window newWindow;
+        emulation_specs chip;
 };
