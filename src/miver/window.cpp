@@ -3,7 +3,7 @@
 /**
  * file : window.cpp
  * 
- * renders the window
+ * renders the i
  */
 class window
 {

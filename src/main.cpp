@@ -8,6 +8,6 @@
 int main(int argc, char** argv)
 {
     proc tasks;
-    tasks.run(argc, argv);
+    tasks.run(argc, (const char *)argv);
     return 0;
 }
