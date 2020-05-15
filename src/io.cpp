@@ -8,11 +8,13 @@
  */
 class proc {
     public:
-        void run(int argc, const char* argv) {
+        int run(int argc, char** argv) {
             // place all tasks here
             // initialize and load game
-            chip.initialize();
-            chip.load(argv);
+            if (!chip.load(argv[1]))
+            {
+                return 2;
+            }
 
 
             // emulation loop
@@ -26,12 +28,15 @@ class proc {
 
 
             }
+
             // create a window
-            newWindow.createWindow(argc, (char**)argv);
+            window.createWindow(argc, argv);
+
+            return 0;
         }
 
     private:
         // give each class a instance here
-        window newWindow;
-        emulation_specs chip;
+        the_window window;
+        chip8 chip;
 };

@@ -3,9 +3,9 @@
 /**
  * file : window.cpp
  * 
- * renders the i
+ * renders the window
  */
-class window
+class the_window
 {
     public:
         int createWindow(int argc, char** argv)

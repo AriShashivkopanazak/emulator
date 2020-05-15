@@ -3,158 +3,440 @@
 #include <iostream>
 #include <random>
 #include "time.h"
+#include "emulation.h"
 
 /**
  * file : emulation.cpp
  * 
  * Holds all processes pertaining to the emulator
  */
-class emulation_specs {
-    //figure out what needs to be private
+class chip8
+{
 public:
-    // chip 8 has 32 opcodes, each 2 bytes long
-    unsigned short opcode;
+	/**
+	 * Load ROM file into memory
+	 * 
+	 * Initialize()
+	 * Opens ROM file
+	 * Gets the file size
+	 * Allocate memory to store ROM
+	 * Copy ROM into Buffer
+	 * Copy Buffer into memory
+	 * 
+	 * make sure this works before cleanup
+	 */
+	bool load(const char *file_path)
+	{
+		initialize();
 
-    // the allowed memory
-    unsigned char memory[4096];
+		// open rom file
+		FILE *rom = fopen(file_path, "rb");
+		if (rom == NULL)
+		{
+			std::cerr << "failed to open rom" << std::endl;
+			return false;
+		}
 
-    // cpu registers 15 8-bit registers
-    unsigned char V[16];
+		// get file size
+		fseek(rom, 0, SEEK_END);
+		long rom_size = ftell(rom);
+		rewind(rom);
 
-    // There is an Index register I and a program counter (pc) which can have a value from 0x000 to 0xFFF
-    unsigned short index_register;
-    unsigned short program_counter;
+		// allocate memory to store rom
+		char *rom_buffer = (char *)malloc(sizeof(char) * rom_size);
+		if (rom_buffer == NULL)
+		{
+			std::cerr << "failed to allocate memory for ROM" << std::endl;
+			return false;
+		}
 
-    /**
-     * memory map
-     * 0x000-0x1FF - Chip 8 interpreter (contains font set in emu)
-     * 0x050-0x0A0 - Used for the built in 4x5 pixel font set (0-F)
-     * 0x200-0xFFF - Program ROM and work RAM
-     * 
-     * The graphics system: 
-     * The chip 8 has one instruction that draws sprite to the screen. 
-     * Drawing is done in XOR mode and if a pixel is turned off as a result of drawing, 
-     * the VF register is set. This is used for collision detection.
-     * The graphics of the Chip 8 are black and white and the screen has a 
-     * total of 2048 pixels (64 x 32). This can easily be implemented 
-     * using an array that hold the pixel state (1 or 0)
-     */
-    unsigned char graphics[64 * 32];
+		// Copy ROM into Buffer
+		size_t result = fread(rom_buffer, sizeof(char), (size_t)rom_size, rom);
+		if (result != rom_size)
+		{
+			std::cerr << "failed to read ROM" << std::endl;
+			return false;
+		}
 
-    // Interrupts and hardware registers. The Chip 8 has none, but there are two
-    // timer registers that count at 60 Hz. When set above zero they will count down to zero.
+		// Copy buffer into memory
+		if ((4096 - 512) > rom_size)
+		{
+			for (int i = 0; i < rom_size; ++i)
+			{
+				// Load into memory starting at 0x200 (=512)
+				e.memory[i + 512] = (uint8_t)rom_buffer[i];
+			}
+		} else {
+			std::cerr << "ROM too large to fit in memory" << std::endl;
+			return false;
+		}
 
-    unsigned char delay_timer;
-    unsigned char sound_timer;
+		// Clean up
+		fclose(rom);
+		free(rom_buffer);
+		std::cout << "loaded successfully";
+		return true;
+	}
 
-    /**
-     * It is important to know that the 
-     * Chip 8 instruction set has opcodes that allow the program 
-     * to jump to a certain address or call a subroutine. 
-     * While the specification don’t mention a stack,
-     *  you will need to implement one as part of the interpreter yourself. 
-     * The stack is used to remember the current location before a jump is performed.
-     *  So anytime you perform a jump or call a subroutine, store the program counter in the stack 
-     * before proceeding. The system has 16 levels of stack and
-     *  in order to remember which level of the stack is used, you need to 
-     * implement a stack pointer (sp).
-     */
-    unsigned short stack[16];
-    unsigned short stack_pointer;
 
-    /**
-     * Finally, the Chip 8 has a HEX based keypad (0x0-0xF), 
-     * you can use an array to store the current state of the key.
-     */
-    unsigned char keypad[16];
-    
-    void initialize()
-    {
-      // Reset
-      program_counter = 0x200; // 512
-      opcode          = 0;
-      index_register  = 0;
-      stack_pointer   = 0;
-      
-      // Clear Display
-      for (int i =0 ; i < 2048 ; ++i) {
-        stack[i] = 0;
-        keypad[i] = 0;
-        V[i] = 0;
-      }
+	/**
+	 * A MESS
+	 */
+	void emulate_cycle()
+	{
+		// Fetch Opcode
+		e.opcode = e.memory[e.program_counter] << 9 | e.memory[e.program_counter + 1]; //opcode is two bytes
 
-      // Clear Memory
-      for (int i = 0 ; i < 4096 ; ++i) {
-        memory[i] = 0;
-      }
 
-      // Reset timers
-      delay_timer = 0;
-      sound_timer = 0;
+		// Decode Opcode
+		// Execute Opcode
+		// Update timers
+		switch (e.opcode & 0xF000)
+		{
+		case 0x0000:
+			switch (e.opcode & 0x000f)
+			{
+			case 0x0000:
+				for (int i = 0; i < 2048; ++i)
+				{
+					e.graphics[i] = 0;
+				}
+				e.draw_flag = true;
+				e.program_counter += 2;
+				break;
 
-      // Seed rng
-      srand (time(NULL));
-    }
+			case 0x000e:
+				--e.stack_pointer;
+				e.program_counter = e.stack[e.stack_pointer];
+				e.program_counter += 2;
+				break;
+			
+			default:
+				printf("\nUnknown op code: %.4X\n", e.opcode);
+					exit(3);
+				}
+				break;
 
-    bool load(const char* file_path)
-    {
-      initialize();
+		case 0x1000:
+			e.program_counter = e.opcode & 0x000f;
+			break;
 
-      // open rom file
-      FILE* rom = fopen(file_path, "rb");
-      if (rom == NULL)
-      {
-        std::cerr << "failed to open rom" << std::endl;
-        return false;
-      }
+		case 0x2000:
+			e.stack[e.stack_pointer] = e.program_counter;
+			++e.stack_pointer;
+			e.program_counter = e.opcode & 0x0fff;
+			break;
+		
+		case 0x3000:
+			if (e.V[(e.opcode & 0X0F00) >> 8] == (e.opcode & 0x00FF))
+			{
+				e.program_counter += 4;
+			} else {
+				e.program_counter += 2;
+			}
+			break;
+		
+		case 0x4000:
+			if (e.V[(e.opcode & 0X0F00) >> 8] != (e.opcode & 0x00FF))
+			{
+				e.program_counter += 4;
+			} else {
+				e.program_counter += 2;
+			}
+			break;
 
-      // get file size
-      fseek(rom, 0, SEEK_END);
-      long rom_size = ftell(rom);
-      rewind(rom);
+		case 0x5000:
+			if (e.V[(e.opcode & 0x0F00) >> 8] == e.V[(e.opcode & 0x00F0) >> 4])
+			{
+				e.program_counter += 4;
+			} else {
+				e.program_counter += 2;
+			}
+			break;
 
-      // allocate memory to store rom
-      char* rom_buffer = (char*) malloc(sizeof(char) * rom_size);
-      if (rom_buffer == NULL) {
-        std::cerr << "failed to allocate memory for ROM" << std::endl;
-        return false;
-      }
+		case 0x6000:
+			e.V[(e.opcode & 0x0F00) >> 8] = e.opcode & 0x00FF;
+				e.program_counter= 2;
+			break;
 
-      // Copy ROM into Buffer
-      size_t result = fread(rom_buffer, sizeof(char), (size_t) rom_size, rom);
-      if (result != rom_size)
-      {
-        std::cerr << "failed to read ROM" << std::endl;
-        return false;
-      }
+		case 0x7000:
+			e.V[(e.opcode & 0x0F00) >> 8] += e.opcode & 0x00FF;
+				e.program_counter= 2;
+			break;
 
-      // Copy buffer into memory
-      if ((4096-512) > rom_size)
-      {
-        for (int i = 0 ; i < rom_size ; ++i)
-        {
-          // Load into memory starting at 0x200 (=512)
-          memory [i + 512] = (uint8_t)rom_buffer[i];
-        }
-      } else
-      {
-        std::cerr << "ROM too large to fit in memory" << std::endl;
-        return false;
-      }
-      
-      // Clean up
-      fclose(rom);
-      free(rom_buffer);
-      std::cout << "loaded successfully";
-      return true;
-    }
+		case 0x8000:
+			switch (e.opcode & 0x000f)
+			{
+			case 0x0000:
+				e.V[(e.opcode & 0x0F00) >> 8] = e.V[(e.opcode & 0x00F0) >> 4];
+				e.program_counter += 2;
+				break;
 
-    void emulate_cycle()
-    {
-      // Fetch Opcode
-      // Decode Opcode
-      // Execute Opcode
-      // Update timers
-    }
+			case 0x0001:
+				e.V[(e.opcode & 0x0F00) >> 8] |= e.V[(e.opcode & 0x00F0) >> 4];
+				e.program_counter += 2;
+				break;
+
+			case 0x0002:
+				e.V[(e.opcode & 0x0F00) >> 8] &= e.V[(e.opcode & 0x00F0) >> 4];
+				e.program_counter += 2;
+				break;
+
+		        case 0x0003:
+            			e.V[(e.opcode & 0x0F00) >> 8] ^= e.V[(e.opcode & 0x00F0) >> 4];
+				e.program_counter += 2;
+				break;
+
+			case 0x0004:
+				e.V[(e.opcode & 0x0F00) >> 8] += e.V[(e.opcode & 0x00F0) >> 4];
+				if (e.V[(e.opcode & 0x00F0) >> 4] > (0xFF - e.V[(e.opcode & 0x0F00) >> 8]))
+					e.V[0xF] = 1; //carry
+				else
+					e.V[0xF] = 0;
+					e.program_counter += 2;
+				break;
+
+			case 0x0005:
+				if (e.V[(e.opcode & 0x00F0) >> 4] > e.V[(e.opcode & 0x0F00) >> 8])
+					e.V[0xF] = 0; // there is a borrow
+				else
+					e.V[0xF] = 1;
+				e.V[(e.opcode & 0x0F00) >> 8] -= e.V[(e.opcode & 0x00F0) >> 4];
+				e.pc += 2;
+				break;
+
+			case 0x0006:
+				e.V[0xF] = e.V[(e.opcode & 0x0F00) >> 8] & 0x1;
+				e.V[(e.opcode & 0x0F00) >> 8] >>= 1;
+				e.program_counter += 2;
+				break;
+
+			case 0x0007:
+				if (e.V[(e.opcode & 0x0F00) >> 8] > e.V[(e.opcode & 0x00F0) >> 4]) // VY-VX
+					e.V[0xF] = 0;                                            // there is a borrow
+				else
+					e.V[0xF] = 1;
+				e.V[(e.opcode & 0x0F00) >> 8] = e.V[(e.opcode & 0x00F0) >> 4] - V[(opcode & 0x0F00) >> 8];
+				e.program_counter += 2;
+				break;
+
+			case 0x000E:
+				e.V[0xF] = e.V[(opcode & 0x0F00) >> 8] >> 7;
+				e.V[(e.opcode & 0x0F00) >> 8] <<= 1;
+				e.program_counter += 2;
+				break;
+
+			default:
+				printf("\nUnknown op code: %.4X\n", opcode);
+				exit(3);
+			}
+			break;
+
+
+		case 0x9000:
+        		if (e.V[(e.opcode & 0x0F00) >> 8] != e.V[(e.opcode & 0x00F0) >> 4])
+			{
+				e.program_counter += 4;
+			} else {
+				e.program_counter += 2;
+			}
+			break;
+			
+		case 0xa000:
+			e.index_register = e.opcode & 0x0FFF;
+			e.program_counter += 2;
+			break;
+
+		case 0xb000:
+			e.program_counter = (e.opcode & 0x0FFF) + e.V[0];
+			break;
+
+		case 0xc000:
+			e.V[(e.opcode & 0x0F00) >> 8] = (rand() % (0xFF + 1)) & (e.opcode & 0x00FF);
+			e.program_counter += 2;
+			break;
+
+		case 0xd000:
+			{
+				unsigned short x = e.V[(e.opcode & 0x0F00) >> 8];
+				unsigned short y = e.V[(e.opcode & 0x00F0) >> 4];
+				unsigned short height = e.opcode & 0x000F;
+				unsigned short pixel;
+
+				e.V[0xF] = 0;
+				for (int yline = 0; yline < height; yline++)
+				{
+					pixel = e.memory[e.index_register + yline];
+					for(int xline = 0; xline < 8; xline++)
+					{
+					if((pixel & (0x80 >> xline)) != 0)
+					{
+						if(e.graphics[(x + xline + ((y + yline) * 64))] == 1)
+						{
+						e.V[0xF] = 1;
+						}
+						e.graphics[x + xline + ((y + yline) * 64)] ^= 1;
+					}
+					}
+				}
+
+				e.draw_flag = true;
+				e.program_counter += 2;
+			}
+			break;
+
+		case 0xe000:
+			switch (e.opcode & 0x00FF)
+			{
+			case 0x009E:
+				if (e.keypad[e.V[(e.opcode & 0x0F00) >> 8]] != 0)
+					e.program_counter += 4;
+				else
+					e.program_counter += 2;
+				break;
+
+			case 0x00A1:
+				if (e.keypad[e.V[(e.opcode & 0x0F00) >> 8]] == 0)
+					e.program_counter += 4;
+				else
+					e.program_counter += 2;
+				break;
+
+			default:
+			printf("\nUnknown op code: %.4X\n", e.opcode);
+			exit(3);
+			}
+			break;
+
+		case 0xf000:
+			switch(e.opcode & 0x00FF)
+			{
+				// FX07 - Sets VX to the value of the delay timer
+				case 0x0007:
+				e.V[(e.opcode & 0x0F00) >> 8] = e.delay_timer;
+				e.program_counter += 2;
+				break;
+
+				// FX0A - A key press is awaited, and then stored in VX
+				case 0x000A:
+				{
+					bool key_pressed = false;
+
+					for(int i = 0; i < 16; ++i)
+					{
+						if(e.keypad[i] != 0)
+						{
+						e.V[(e.opcode & 0x0F00) >> 8] = i;
+						key_pressed = true;
+						}
+				}
+
+				// If no key is pressed, return and try again.
+				if(!key_pressed)
+					return;
+
+				e.program_counter += 2;
+				}
+				break;
+
+				case 0x0015:
+					e.delay_timer = e.V[(e.opcode & 0x0F00) >> 8];
+					e.program_counter += 2;
+					break;
+
+				case 0x0018:
+					e.sound_timer = e.V[(e.opcode & 0x0F00) >> 8];
+					e.program_counter += 2;
+					break;
+
+				case 0x001E:
+					if(e.index_register + e.V[(e.opcode & 0x0F00) >> 8] > 0xFFF)
+						e.V[0xF] = 1;
+					else
+						e.V[0xF] = 0;
+					e.index_register += e.V[(e.opcode & 0x0F00) >> 8];
+					e.program_counter += 2;
+					break;
+
+				case 0x0029:
+					e.index_register = e.V[(e.opcode & 0x0F00) >> 8] * 0x5;
+					e.program_counter += 2;
+					break;
+
+				case 0x0033:
+					e.memory[e.index_register]     = e.V[(e.opcode & 0x0F00) >> 8] / 100;
+					e.memory[e.index_register + 1] = (e.V[(e.opcode & 0x0F00) >> 8] / 10) % 10;
+					e.memory[e.index_register + 2] = e.V[(e.opcode & 0x0F00) >> 8] % 10;
+					e.program_counter += 2;
+					break;
+
+				case 0x0055:
+					for (int i = 0; i <= ((e.opcode & 0x0F00) >> 8); ++i)
+						e.memory[e.index_register + i] = e.V[i];
+					// On the original interpreter, when the
+					// operation is done, I = I + X + 1.
+					e.index_register += ((e.opcode & 0x0F00) >> 8) + 1;
+					e.program_counter += 2;
+					break;
+
+				case 0x0065:
+					for (int i = 0; i <= ((e.opcode & 0x0F00) >> 8); ++i)
+						e.V[i] = e.memory[e.index_register + i];
+
+					// On the original interpreter,
+					// when the operation is done, I = I + X + 1.
+					e.index_register += ((e.opcode & 0x0F00) >> 8) + 1;
+					e.program_counter += 2;
+					break;
+
+				default:
+				printf ("Unknown opcode [0xF000]: 0x%X\n", e.opcode);
+			}
+			break;
+
+    		default:
+        		printf("\nUnimplemented op code: %.4X\n", e.opcode);
+        		exit(3);
+		}
+	}
+private:
+
+	emulation_specs e;
+
+	/**
+	 * Initialize the emulator
+	 * 
+	 * Reset counters and registers
+	 * Clear display
+	 * Clear memory
+	 */
+	void initialize()
+	{
+		// Reset
+		e.program_counter = 0x200; // 512
+		e.opcode = 0;
+		e.index_register = 0;
+		e.stack_pointer = 0;
+
+		// Clear Display
+		for (int i = 0; i < 2048; ++i)
+		{
+			e.stack[i] = 0;
+			e.keypad[i] = 0;
+			e.V[i] = 0;
+		}
+
+		// Clear Memory
+		for (int i = 0; i < 4096; ++i)
+		{
+			e.memory[i] = 0;
+		}
+
+		// Reset timers
+		e.delay_timer = 0;
+		e.sound_timer = 0;
+
+		// Seed rng
+		srand(time(NULL));
+	}
 };
-
