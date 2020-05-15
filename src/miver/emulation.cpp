@@ -80,7 +80,7 @@ public:
 
 
 	/**
-	 * A MESS
+	 * Emulate one Cycle
 	 */
 	void emulate_cycle()
 	{
@@ -202,7 +202,7 @@ public:
 				else
 					e.V[0xF] = 1;
 				e.V[(e.opcode & 0x0F00) >> 8] -= e.V[(e.opcode & 0x00F0) >> 4];
-				e.pc += 2;
+				e.program_counter += 2;
 				break;
 
 			case 0x0006:
@@ -216,18 +216,18 @@ public:
 					e.V[0xF] = 0;                                            // there is a borrow
 				else
 					e.V[0xF] = 1;
-				e.V[(e.opcode & 0x0F00) >> 8] = e.V[(e.opcode & 0x00F0) >> 4] - V[(opcode & 0x0F00) >> 8];
+				e.V[(e.opcode & 0x0F00) >> 8] = e.V[(e.opcode & 0x00F0) >> 4] - e.V[(e.opcode & 0x0F00) >> 8];
 				e.program_counter += 2;
 				break;
 
 			case 0x000E:
-				e.V[0xF] = e.V[(opcode & 0x0F00) >> 8] >> 7;
+				e.V[0xF] = e.V[(e.opcode & 0x0F00) >> 8] >> 7;
 				e.V[(e.opcode & 0x0F00) >> 8] <<= 1;
 				e.program_counter += 2;
 				break;
 
 			default:
-				printf("\nUnknown op code: %.4X\n", opcode);
+				printf("\nUnknown op code: %.4X\n", e.opcode);
 				exit(3);
 			}
 			break;
